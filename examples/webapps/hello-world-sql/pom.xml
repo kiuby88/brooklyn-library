@@ -101,9 +101,24 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <dependency>
+            <groupId>net.bull.javamelody</groupId>
+            <artifactId>javamelody-core</artifactId>
+            <version>1.56.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.thoughtworks.xstream</groupId>
+            <artifactId>xstream</artifactId>
+            <version>1.4.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jrobin</groupId>
+            <artifactId>jrobin</artifactId>
+            <version>1.5.9</version>
+        </dependency>
     </dependencies>
 
     <build>
-        <finalName>brooklyn-example-hello-world-sql-webapp</finalName>
+        <finalName>webchat-jm</finalName>
     </build>
 </project>
