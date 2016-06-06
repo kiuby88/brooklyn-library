@@ -1,4 +1,9 @@
 <%@ page language="java" import="java.sql.*"%>
+<%@ page import="com.google.gson.JsonElement" %>
+<%@ page import="com.google.gson.JsonParser" %>
+<%@ page import="com.google.gson.JsonObject" %>
+<%@ page import="com.google.gson.JsonArray" %>
+
 
 <html>
 <!--
@@ -39,6 +44,34 @@ deployed by brooklyn, to show <b>SQL database interactivity</b>.
 
 <%
 String url=System.getProperty("brooklyn.example.db.url");
+
+if ((url == null ) || (url.isEmpty())) {
+    url = System.getenv("brooklyn.example.db.url");
+}
+
+if ((url == null ) || (url.isEmpty())) {
+try{
+String VCAP_SERVICES=System.getenv("VCAP_SERVICES");
+JsonElement jelement = new JsonParser().parse(VCAP_SERVICES);
+JsonObject  jobject = jelement.getAsJsonObject();
+JsonArray clearDB = jobject.getAsJsonArray("cleardb");
+JsonObject credentials = clearDB.get(0).getAsJsonObject().getAsJsonObject("credentials");
+
+String hostName = credentials.get("hostname").getAsString();
+String username = credentials.get("username").getAsString();
+String password = credentials.get("password").getAsString();
+String name = credentials.get("name").getAsString();
+
+url= "jdbc:mysql://"+hostName+":3306/"+name+"?user="+username+"&password="+password;
+} catch(Exception e) {
+%>
+<li> <b>The database does not appear to be connected.</b> </li>
+<li> ERROR: <%= e %> </li>
+<%
+
+}
+
+}
 //URL should be supplied e.g. ""-Dbrooklyn.example.db.url=jdbc:mysql://localhost/visitors?user=brooklyn&password=br00k11n"
 //(note quoting needed due to ampersand)
 if (url==null) {
@@ -57,24 +90,24 @@ Statement stmt=null;
 int i=0;
 
 try {
-  
+
   String DRIVER = "com.mysql.jdbc.Driver";
   Class.forName(DRIVER).newInstance();
 
   con=DriverManager.getConnection(url);
   stmt=con.createStatement();
-  
+
   if (request.getParameter("name")!=null) {
       //add a message
       stmt.execute("INSERT INTO MESSAGES values (default, '"+
-              //better escaping and security desired... 
+              //better escaping and security desired...
               //this essentially does StringEscapeUtils.escapeSql (either brooklyn.util or apache commons)
               request.getParameter("name").replaceAll("'", "''")+
               "', '"+
               request.getParameter("message").replaceAll("'", "''")+
               "')");
   }
-  
+
   rst=stmt.executeQuery("select * from MESSAGES");
   while (rst.next()) {
 %>
