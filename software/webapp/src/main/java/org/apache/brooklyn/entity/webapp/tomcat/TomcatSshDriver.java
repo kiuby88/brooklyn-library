@@ -27,6 +27,7 @@ import java.util.Map;
 
 import com.google.common.base.Preconditions;
 
+import org.apache.brooklyn.entity.java.UsesJava;
 import org.apache.brooklyn.entity.webapp.JavaWebAppSshDriver;
 import org.apache.brooklyn.location.ssh.SshMachineLocation;
 import org.apache.brooklyn.util.collections.MutableList;
@@ -135,6 +136,7 @@ public class TomcatSshDriver extends JavaWebAppSshDriver implements TomcatDriver
                 .put("CATALINA_PID", "pid.txt")
                 .put("CATALINA_BASE", getRunDir())
                 .put("RUN", getRunDir())
+                .putAll(entity.getConfig(UsesJava.JAVA_SYSPROPS))
                 .build();
 
         // Double quoting of individual JAVA_OPTS entries required due to eval in catalina.sh
