@@ -18,17 +18,7 @@
  */
 package org.apache.brooklyn.entity.webapp;
 
-import com.google.common.annotations.Beta;
-import com.google.common.collect.ImmutableSet;
-import org.apache.brooklyn.api.entity.EntityLocal;
-import org.apache.brooklyn.core.entity.Attributes;
-import org.apache.brooklyn.entity.java.JavaSoftwareProcessDriver;
-import org.apache.brooklyn.entity.software.base.AbstractApplicationCloudFoundryDriver;
-import org.apache.brooklyn.entity.software.base.SoftwareProcess;
-import org.apache.brooklyn.location.cloudfoundry.CloudFoundryPaasLocation;
-import org.apache.brooklyn.util.http.HttpTool;
-import org.cloudfoundry.client.lib.domain.CloudApplication;
-import org.cloudfoundry.client.lib.domain.Staging;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +29,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import org.apache.brooklyn.api.entity.EntityLocal;
+import org.apache.brooklyn.core.entity.Attributes;
+import org.apache.brooklyn.entity.java.JavaSoftwareProcessDriver;
+import org.apache.brooklyn.entity.software.base.AbstractApplicationCloudFoundryDriver;
+import org.apache.brooklyn.entity.software.base.SoftwareProcess;
+import org.apache.brooklyn.location.cloudfoundry.CloudFoundryPaasLocation;
+import org.apache.brooklyn.util.http.HttpTool;
+import org.cloudfoundry.client.lib.domain.CloudApplication;
+import org.cloudfoundry.client.lib.domain.Staging;
+
+import com.google.common.annotations.Beta;
+import com.google.common.collect.ImmutableSet;
 
 @Beta
 public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCloudFoundryDriver
@@ -47,8 +48,9 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
 
     private static final int HTTP_PORT = 8080;
     private static final int HTTP_PORTS = 443;
-    private static final  Set<String> ENABLED_PROTOCOLS;
-    static{
+    private static final Set<String> ENABLED_PROTOCOLS;
+
+    static {
         ENABLED_PROTOCOLS = ImmutableSet.of("http", "https");
     }
 
@@ -80,10 +82,10 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         //artifact (war) without using the java service.
         applicationWarUrl = getEntity().getConfig(JavaWebAppService.ROOT_WAR);
 
-        String nameWithExtension=getFilenameContextMapper()
+        String nameWithExtension = getFilenameContextMapper()
                 .findArchiveNameFromUrl(applicationWarUrl, true);
-        applicationName  = nameWithExtension.substring(0, nameWithExtension.indexOf('.'))
-                + "-" +entity.getId();
+        applicationName = nameWithExtension.substring(0, nameWithExtension.indexOf('.'))
+                + "-" + entity.getId();
 
         //These values shouldn't be null or empty
         checkNotNull(applicationWarUrl, "application war url");
@@ -94,7 +96,7 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
      * It allows to change the value to the generic entity attributes
      * according to the PaaS constraint
      */
-    protected void initAttributes(){
+    protected void initAttributes() {
         getEntity().setAttribute(Attributes.HTTP_PORT, HTTP_PORT);
         getEntity().setAttribute(Attributes.HTTPS_PORT, HTTP_PORTS);
 
@@ -102,15 +104,15 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
     }
 
     @Override
-    public String getBuildpack(){
+    public String getBuildpack() {
         return getEntity().getBuildpack();
     }
 
-    protected String getApplicationUrl(){
+    protected String getApplicationUrl() {
         return applicationWarUrl;
     }
 
-    protected String getApplicationName(){
+    protected String getApplicationName() {
         return applicationName;
     }
 
@@ -139,10 +141,10 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         return super.isRunning() && isInferRootAvailable();
     }
 
-    private boolean isInferRootAvailable(){
+    private boolean isInferRootAvailable() {
         boolean result;
         try {
-            result = HttpTool.getHttpStatusCode(inferRootUrl()) == HttpURLConnection.HTTP_OK ;
+            result = HttpTool.getHttpStatusCode(inferRootUrl()) == HttpURLConnection.HTTP_OK;
         } catch (Exception e) {
             result = false;
         }
@@ -150,8 +152,21 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
     }
 
     @Override
-    public void preLaunch(){
+    public void preLaunch() {
+        pushArtifact();
         configureEnv();
+    }
+
+    protected void pushArtifact(){
+        File war;
+        try {
+            war = LocalResourcesDownloader
+                    .downloadResourceInLocalDir(getApplicationUrl());
+            getClient().uploadApplication(getApplicationName(), war.getCanonicalPath());
+        } catch (IOException e) {
+            log.error("Error deploying application {} managed by driver {}",
+                    new Object[]{getEntity(), this});
+        }
     }
 
     /**
@@ -159,8 +174,8 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
      * {@link JavaWebAppSoftwareProcess#JAVA_SYSPROPS) as envs on CF.
      */
     @SuppressWarnings("unchecked")
-    protected void configureEnv(){
-        Map<String,String> shellEnvProp = (Map<String,String>)(Map) getEntity().getConfig(SoftwareProcess.SHELL_ENVIRONMENT);
+    protected void configureEnv() {
+        Map<String, String> shellEnvProp = (Map<String, String>) (Map) getEntity().getConfig(SoftwareProcess.SHELL_ENVIRONMENT);
         setEnv(shellEnvProp);
         setEnv(getEntity().getConfig(JavaWebAppSoftwareProcess.JAVA_SYSPROPS));
     }
@@ -180,7 +195,7 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         super.postLaunch();
         String domainUrl = inferRootUrl();
         getEntity().setAttribute(Attributes.MAIN_URI, URI.create(domainUrl));
-        entity.setAttribute(WebAppService.ROOT_URL,  domainUrl);
+        entity.setAttribute(WebAppService.ROOT_URL, domainUrl);
     }
 
     protected String inferRootUrl() {
@@ -198,7 +213,7 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
             checkNotNull(port, "HTTP_PORT sensors not set; is an acceptable port available?");
             return String.format("http://%s", domainUri);
         } else {
-            throw new IllegalStateException("HTTP and HTTPS protocols not enabled for "+entity+"; enabled protocols are "+getEnabledProtocols());
+            throw new IllegalStateException("HTTP and HTTPS protocols not enabled for " + entity + "; enabled protocols are " + getEnabledProtocols());
         }
     }
 
@@ -235,24 +250,13 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
     public String deploy(String url, String targetName) {
         List<String> uris = new ArrayList<String>();
         Staging staging;
-        File war;
+        staging = new Staging(null, getBuildpack());
+        uris.add(inferApplicationDomainUri(getApplicationName()));
 
-        try {
-            staging = new Staging(null, getBuildpack());
-            uris.add(inferApplicationDomainUri(getApplicationName()));
 
-            war=LocalResourcesDownloader
-                    .downloadResourceInLocalDir(getApplicationUrl());
-
-            getClient().createApplication(getApplicationName(), staging,
-                    getLocation().getConfig(CloudFoundryPaasLocation.REQUIRED_MEMORY),
-                    uris, null);
-            getClient().uploadApplication(getApplicationName(), war.getCanonicalPath());
-        } catch (IOException e) {
-            log.error("Error deploying application {} managed by driver {}",
-                    new Object[]{getEntity(), this});
-        }
-
+        getClient().createApplication(getApplicationName(), staging,
+                getLocation().getConfig(CloudFoundryPaasLocation.REQUIRED_MEMORY),
+                uris, null);
         return targetName;
     }
 
