@@ -35,6 +35,8 @@ import org.apache.brooklyn.entity.java.JavaSoftwareProcessDriver;
 import org.apache.brooklyn.entity.software.base.AbstractApplicationCloudFoundryDriver;
 import org.apache.brooklyn.entity.software.base.SoftwareProcess;
 import org.apache.brooklyn.location.cloudfoundry.CloudFoundryPaasLocation;
+import org.apache.brooklyn.util.collections.MutableList;
+import org.apache.brooklyn.util.collections.MutableSet;
 import org.apache.brooklyn.util.http.HttpTool;
 import org.cloudfoundry.client.lib.domain.CloudApplication;
 import org.cloudfoundry.client.lib.domain.Staging;
@@ -56,6 +58,7 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
 
     private String applicationName;
     private String applicationWarUrl;
+    private Set<String> oldEnabledProtocols;
 
     public JavaWebAppCloudFoundryDriver(EntityLocal entity, CloudFoundryPaasLocation location) {
         super(entity, location);
@@ -97,6 +100,9 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
      * according to the PaaS constraint
      */
     protected void initAttributes() {
+
+        oldEnabledProtocols = MutableSet
+                .copyOf(getEntity().getConfig(WebAppServiceConstants.ENABLED_PROTOCOLS));
         getEntity().setAttribute(Attributes.HTTP_PORT, HTTP_PORT);
         getEntity().setAttribute(Attributes.HTTPS_PORT, HTTP_PORTS);
 
@@ -275,5 +281,11 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         return false;
     }
 
+
+    @Override
+    public void stop() {
+        entity.sensors().set(JavaWebAppSoftwareProcess.ENABLED_PROTOCOLS, oldEnabledProtocols);
+        super.stop();
+    }
 
 }
