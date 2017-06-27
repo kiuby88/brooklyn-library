@@ -18,6 +18,8 @@
  */
 package org.apache.brooklyn.entity.webapp;
 
+import java.util.Map;
+
 import org.apache.brooklyn.api.catalog.Catalog;
 import org.apache.brooklyn.api.effector.Effector;
 import org.apache.brooklyn.api.entity.Entity;

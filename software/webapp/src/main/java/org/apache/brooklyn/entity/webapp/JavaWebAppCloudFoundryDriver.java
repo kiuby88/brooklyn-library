@@ -31,6 +31,7 @@ import java.util.Set;
 
 import org.apache.brooklyn.api.entity.EntityLocal;
 import org.apache.brooklyn.core.entity.Attributes;
+import org.apache.brooklyn.core.sensor.Sensors;
 import org.apache.brooklyn.entity.java.JavaSoftwareProcessDriver;
 import org.apache.brooklyn.entity.software.base.AbstractApplicationCloudFoundryDriver;
 import org.apache.brooklyn.entity.software.base.SoftwareProcess;
@@ -202,6 +203,7 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         String domainUrl = inferRootUrl();
         getEntity().setAttribute(Attributes.MAIN_URI, URI.create(domainUrl));
         entity.setAttribute(WebAppService.ROOT_URL, domainUrl);
+        entity.sensors().set(Attributes.ADDRESS, domainUrl);
     }
 
     protected String inferRootUrl() {
@@ -258,7 +260,6 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         Staging staging;
         staging = new Staging(null, getBuildpack());
         uris.add(inferApplicationDomainUri(getApplicationName()));
-
 
         getClient().createApplication(getApplicationName(), staging,
                 getLocation().getConfig(CloudFoundryPaasLocation.REQUIRED_MEMORY),
