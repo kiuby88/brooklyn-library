@@ -191,7 +191,26 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
 
 
 
+        Asserts.succeedsEventually( MutableMap.of("timeout", new Duration(10, TimeUnit.MINUTES)), new Runnable() {
+            public void run() {
+                assertEquals(son.getLocations().size(), 1);
+            }
+        });
 
+
+        Asserts.succeedsEventually( MutableMap.of("timeout", new Duration(10, TimeUnit.MINUTES)), new Runnable() {
+            public void run() {
+                assertTrue(son.getAttribute(TomcatServer.SERVICE_PROCESS_IS_RUNNING));
+                assertTrue(son.getAttribute(TomcatServer.SERVICE_UP));
+                //assertTrue(app.getAttribute(Startable.SERVICE_UP));
+                assertTrue(app.getAttribute(Startable.SERVICE_UP));
+                //assertTrue(entity.getAttribute(VanillaCloudFoundryApplication
+                //        .SERVICE_PROCESS_IS_RUNNING));
+            }
+        });
+
+
+/*
         Asserts.succeedsEventually( MutableMap.of("timeout", new Duration(10, TimeUnit.MINUTES)), new Runnable() {
             public void run() {
                 assertFalse(son.getAttribute(TomcatServer.SERVICE_PROCESS_IS_RUNNING));
@@ -205,7 +224,7 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
 
         assertTrue(app.getAttribute(Startable.SERVICE_UP));
         assertFalse(son.getAttribute(Startable.SERVICE_UP));
-        assertFalse(parent.getAttribute(Startable.SERVICE_UP));
+        assertFalse(parent.getAttribute(Startable.SERVICE_UP));*/
 
     }
 

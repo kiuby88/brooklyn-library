@@ -27,6 +27,7 @@ import org.apache.brooklyn.api.effector.Effector;
 import org.apache.brooklyn.api.entity.Application;
 import org.apache.brooklyn.api.entity.Entity;
 import org.apache.brooklyn.api.entity.EntityLocal;
+import org.apache.brooklyn.api.location.Location;
 import org.apache.brooklyn.api.mgmt.TaskAdaptable;
 import org.apache.brooklyn.api.sensor.SensorEvent;
 import org.apache.brooklyn.api.sensor.SensorEventListener;
@@ -173,7 +174,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
 
         //ya estan todos los nodos parados. Iniciarlos dentro de un for para hacer la ejecucion paralela
-        //startNodes(application, locationSpec);
+        startNodes(application, locationSpec);
 
 
 
@@ -332,7 +333,6 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             log.info("************************ FOUND CHILD0>:" + child.getConfig(BrooklynCampConstants.PLAN_ID) + " *************");
 
 
-            final String childLocation = entry.getValue();
 
             if (child == null) {
                 throw new RuntimeException("Child does not exist camp id: " + entry.getKey());
@@ -380,7 +380,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         public Void call() {
 
             final String entityPlanId = getPlanId(entity);
-            if(ServiceStateLogic.getExpectedState(entity)!= Lifecycle.STOPPING || ServiceStateLogic.getExpectedState(entity)!= Lifecycle.STOPPED) {
+            if(ServiceStateLogic.getExpectedState(entity)!= Lifecycle.STOPPING && ServiceStateLogic.getExpectedState(entity)!= Lifecycle.STOPPED) {
                 log.info("Entity {} can not be started because it is not STOPPED", entityPlanId);
                 return null;
             }
@@ -422,6 +422,9 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             if(brothers.contains(entityPlanId)) {
                 startEntityInLocation(entity, locationSpec.get(entityPlanId));
             } else {
+                log.info("*******************************");
+                log.info("******* RESTART location ***** => " + entity.getLocations().size());
+                log.info("*******************************");
                 entity.invoke(Startable.RESTART, MutableMap.<String, Object>of()).blockUntilEnded();
             }
         }
@@ -431,7 +434,10 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             log.info("*******************************");
             log.info("******* START location ***** => " + entity.getLocations().size());
             log.info("*******************************");
-            entity.invoke(Startable.START, MutableMap.<String, Object>of("locations", MutableList.of(newLocation))).blockUntilEnded();
+            Location loc = getManagementContext().getLocationRegistry().getLocationManaged(newLocation);
+            //entity.invoke(Startable.START, MutableMap.<String, Object>of("locations", MutableList.of(newLocation))).blockUntilEnded();
+            entity.getLocations().add(loc);
+            entity.invoke(Startable.START, MutableMap.<String, Object>of("locations", MutableList.of())).blockUntilEnded();
         }
 
 
@@ -448,7 +454,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
     }
 
     private String getPlanId(final Entity entity){
-        return this.entity.getConfig(BrooklynCampConstants.PLAN_ID);
+        return entity.getConfig(BrooklynCampConstants.PLAN_ID);
     }
 
 
