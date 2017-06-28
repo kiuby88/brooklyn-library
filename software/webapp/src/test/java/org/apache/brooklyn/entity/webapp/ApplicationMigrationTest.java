@@ -18,6 +18,7 @@
  */
 package org.apache.brooklyn.entity.webapp;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -109,6 +110,7 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
                 .configure(TomcatServer.ROOT_WAR, "http://search.maven.org/remotecontent?filepath=org/apache/brooklyn/example/brooklyn-example-hello-world-sql-webapp/0.8.0-incubating/brooklyn-example-hello-world-sql-webapp-0.8.0-incubating.war")
                 .configure(TomcatServer.HTTP_PORT, PortRanges.fromString("8080+"))
                 .configure(BrooklynCampConstants.PLAN_ID, "webapp1")
+                .location(mgmt.getLocationRegistry().getLocationSpec("localhost").get())
                 //.location(mgmt.getLocationRegistry().getLocationSpec("aws-ec2:eu-west-1").get())
                 ;
 
@@ -116,7 +118,7 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
                 .configure(TomcatServer.ROOT_WAR, "http://search.maven.org/remotecontent?filepath=org/apache/brooklyn/example/brooklyn-example-hello-world-sql-webapp/0.8.0-incubating/brooklyn-example-hello-world-sql-webapp-0.8.0-incubating.war")
                 .configure(TomcatServer.HTTP_PORT, PortRanges.fromString("8080+"))
                 .configure(BrooklynCampConstants.PLAN_ID, "parent")
-
+                .location(mgmt.getLocationRegistry().getLocationSpec("localhost").get())
                 //.location(mgmt.getLocationRegistry().getLocationSpec("aws-ec2:eu-west-1").get())
                 ;
 
@@ -143,7 +145,9 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
 
         app.addPolicy(PolicySpec.create(ApplicationMigrationPolicy.class));
         //location necessary
-        app.start(ImmutableList.<Location>of(loc));
+        app.start(ImmutableList.<Location>of(
+                        //loc
+                ));
 
 
         MutableMap<String, Duration> flags = MutableMap.of("timeout", Duration.ONE_HOUR);
@@ -165,6 +169,10 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
         log.info("************************ Relations Parent:" + parent.relations().getRelations(EntityRelations.TARGETTED_BY).size());
 
 
+        assertEquals(son.getLocations().size(), 2);
+        assertEquals(((Location)son.getLocations().toArray()[0]).getDisplayName(), "localhost");
+
+
 
         final Map<String, String> childrenToMigrate = ImmutableMap.of("webapp1", "pivotal-ws2");
         final Map<String, Map<String, String>> effectorParameters = ImmutableMap.of(ApplicationMigrateEffector.MIGRATE_CHILDREN_LOCATIONS_SPEC, childrenToMigrate);
@@ -179,6 +187,9 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
 
 
         app.invoke(ApplicationMigrateEffector.MIGRATE_APPLICATION, effectorParameters).blockUntilEnded();
+
+
+
 
 
         Asserts.succeedsEventually( MutableMap.of("timeout", new Duration(10, TimeUnit.MINUTES)), new Runnable() {
