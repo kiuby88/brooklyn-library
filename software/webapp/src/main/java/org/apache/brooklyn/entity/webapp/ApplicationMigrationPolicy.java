@@ -93,11 +93,6 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
     }
 
 
-
-
-
-
-
     private void migrate(final Application application, final Map<String, String> locationSpec) {
         //para cada entity hay que añadir un algoritmo para para todos los componentes
 
@@ -111,7 +106,6 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         }
 
         for (final Map.Entry<String, String> entry : locationSpec.entrySet()) {
-
 
 
             final EntityInternal child = (EntityInternal) findChildEntitySpecByPlanId(application, entry.getKey());
@@ -143,7 +137,6 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                         tasks);
 
 
-
         try {
             DynamicTasks.queue(invoke).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
             //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
@@ -161,8 +154,6 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                         stopNodes(application, locationSpec, brothers));
 
 
-
-
         try {
             DynamicTasks.queue(invokeStopNode).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
             //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
@@ -172,14 +163,11 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         }
 
 
-
         //ya estan todos los nodos parados. Iniciarlos dentro de un for para hacer la ejecucion paralela
         startNodes(application, locationSpec);
 
 
-
     }
-
 
 
     private class StopParentsTask implements Callable<Void> {
@@ -264,17 +252,14 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
     }
 
 
-
-    private List<TaskAdaptable<Void>> stopNodes(Application application, Map<String, String> locationSpec, ImmutableList<String> brothers){
+    private List<TaskAdaptable<Void>> stopNodes(Application application, Map<String, String> locationSpec, ImmutableList<String> brothers) {
 
         final List<TaskAdaptable<Void>> tasks = Lists.newArrayList();
 
         for (final Map.Entry<String, String> entry : locationSpec.entrySet()) {
 
 
-
             final EntityInternal node = (EntityInternal) findChildEntitySpecByPlanId(application, entry.getKey());
-
 
 
             if (node == null) {
@@ -297,7 +282,6 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
     }
 
 
-
     private class StopNodeTask implements Callable<Void> {
 
         private final EntityInternal entity;
@@ -312,7 +296,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
             entity.invoke(Startable.STOP, MutableMap.<String, Object>of("stopMachineMode",
                     SoftwareProcess.StopSoftwareParameters.StopMode.NEVER))
-            .blockUntilEnded();
+                    .blockUntilEnded();
             log.info("Partial Stopping == " + getEntityName(entity));
 
             return null;
@@ -320,9 +304,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
     }
 
 
-
     private void startNodes(final Application application, final Map<String, String> locationSpec) {
-
 
 
         final List<TaskAdaptable<Void>> tasks = Lists.newArrayList();
@@ -331,7 +313,6 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             final EntityInternal child = (EntityInternal) findChildEntitySpecByPlanId(application, entry.getKey());
 
             log.info("************************ FOUND CHILD0>:" + child.getConfig(BrooklynCampConstants.PLAN_ID) + " *************");
-
 
 
             if (child == null) {
@@ -353,7 +334,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                         MutableMap.of(
                                 "displayName", " stop (parallel)",
                                 "description", "stop tast"), tasks
-                        );
+                );
 
         try {
             DynamicTasks.queue(invokeStandUpTasks).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
@@ -380,46 +361,62 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         public Void call() {
 
             final String entityPlanId = getPlanId(entity);
-            if(ServiceStateLogic.getExpectedState(entity)!= Lifecycle.STOPPING && ServiceStateLogic.getExpectedState(entity)!= Lifecycle.STOPPED) {
+            if (ServiceStateLogic.getExpectedState(entity) != Lifecycle.STOPPING && ServiceStateLogic.getExpectedState(entity) != Lifecycle.STOPPED) {
                 log.info("Entity {} can not be started because it is not STOPPED", entityPlanId);
+                return null;
+
+            }
+
+            if (!allChildrenAreRunning(entity)) {
+                log.info("Entity {} can not be started because any child is not running", entityPlanId);
                 return null;
             }
 
 
-            //inicia la entity en la expected location
-            standUptEntity(entity);
-
-            final List<TaskAdaptable<Void>> standUptTasks = Lists.newArrayList();
-            for (final Entity targetted : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
-                standUptTasks.add(Tasks.<Void>builder()
-                        .displayName("start (machine)")
-                        .body(new StartNodesTask((EntityInternal) targetted, locationSpec))
-                        .build());
-            }
+                //inicia la entity en la expected location
+                standUptEntity(entity);
 
 
-            final ParallelTask<Void> invokeStandUpNode =
-                    new ParallelTask<Void>(
-                            MutableMap.of(
-                                    "displayName", " standUp (parallel)",
-                                    "description", "standUp"),
-                            standUptTasks);
+                final List<TaskAdaptable<Void>> standUptTasks = Lists.newArrayList();
+                for (final Entity targetted : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
+                    standUptTasks.add(Tasks.<Void>builder()
+                            .displayName("start (machine)")
+                            .body(new StartNodesTask((EntityInternal) targetted, locationSpec))
+                            .build());
+                }
 
-            try {
-                DynamicTasks.queue(invokeStandUpNode).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
-                //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
-            } catch (Throwable e) {
-                ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
-                Exceptions.propagate(e);
-            }
+
+                final ParallelTask<Void> invokeStandUpNode =
+                        new ParallelTask<Void>(
+                                MutableMap.of(
+                                        "displayName", " standUp (parallel)",
+                                        "description", "standUp"),
+                                standUptTasks);
+
+                try {
+                    DynamicTasks.queue(invokeStandUpNode).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
+                    //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
+                } catch (Throwable e) {
+                    ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
+                    Exceptions.propagate(e);
+                }
 
 
             return null;
         }
 
+        private boolean allChildrenAreRunning(final EntityInternal entity) {
+            for (final Entity target : entity.relations().getRelations(EntityRelations.HAS_TARGET)) {
+                if (!target.getAttribute(SoftwareProcess.SERVICE_PROCESS_IS_RUNNING)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         private void standUptEntity(final EntityInternal entity) {
             final String entityPlanId = getPlanId(entity);
-            if(brothers.contains(entityPlanId)) {
+            if (brothers.contains(entityPlanId)) {
                 startEntityInLocation(entity, locationSpec.get(entityPlanId));
             } else {
                 log.info("*******************************");
@@ -436,13 +433,12 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             log.info("*******************************");
             Location loc = getManagementContext().getLocationRegistry().getLocationManaged(newLocation);
             //entity.invoke(Startable.START, MutableMap.<String, Object>of("locations", MutableList.of(newLocation))).blockUntilEnded();
-            entity.getLocations().add(loc);
+            entity.addLocations(ImmutableList.of(loc));
             entity.invoke(Startable.START, MutableMap.<String, Object>of("locations", MutableList.of())).blockUntilEnded();
         }
 
 
     }
-
 
 
     private boolean entityIsUp(final Entity entity) {
@@ -453,7 +449,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         return brotherToMigrate.contains(getPlanId(entity));
     }
 
-    private String getPlanId(final Entity entity){
+    private String getPlanId(final Entity entity) {
         return entity.getConfig(BrooklynCampConstants.PLAN_ID);
     }
 
