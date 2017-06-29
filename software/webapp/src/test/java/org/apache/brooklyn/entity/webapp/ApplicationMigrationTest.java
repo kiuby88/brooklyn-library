@@ -125,7 +125,7 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
         final EntitySpec<TomcatServer> gParentSpec = EntitySpec.create(TomcatServer.class)
                 .configure(TomcatServer.ROOT_WAR, "http://search.maven.org/remotecontent?filepath=org/apache/brooklyn/example/brooklyn-example-hello-world-sql-webapp/0.8.0-incubating/brooklyn-example-hello-world-sql-webapp-0.8.0-incubating.war")
                 .configure(TomcatServer.HTTP_PORT, PortRanges.fromString("8080+"))
-                .configure(BrooklynCampConstants.PLAN_ID, "gran-parent")
+                .configure(BrooklynCampConstants.PLAN_ID, "gparent")
                 .location(mgmt.getLocationRegistry().getLocationSpec("localhost").get())
                 //.location(mgmt.getLocationRegistry().getLocationSpec("aws-ec2:eu-west-1").get())
                 ;
@@ -178,7 +178,11 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
 
 
 
-        final Map<String, String> childrenToMigrate = ImmutableMap.of("webapp1", "pivotal-ws2", "parent", "pivotal-ws2");
+        final Map<String, String> childrenToMigrate = ImmutableMap
+                .of(
+                        //"webapp5", "pivotal-ws2",
+                        "webapp1", "pivotal-ws2",
+                        "gparent", "pivotal-ws2");
         final Map<String, Map<String, String>> effectorParameters = ImmutableMap.of(ApplicationMigrateEffector.MIGRATE_CHILDREN_LOCATIONS_SPEC, childrenToMigrate);
 
         log.info("************************ READY TO MIGRATE *************");
