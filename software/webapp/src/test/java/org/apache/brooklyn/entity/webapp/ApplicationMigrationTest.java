@@ -125,7 +125,9 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
         final EntitySpec<TomcatServer> gParentSpec = EntitySpec.create(TomcatServer.class)
                 .configure(TomcatServer.ROOT_WAR, "http://search.maven.org/remotecontent?filepath=org/apache/brooklyn/example/brooklyn-example-hello-world-sql-webapp/0.8.0-incubating/brooklyn-example-hello-world-sql-webapp-0.8.0-incubating.war")
                 .configure(TomcatServer.HTTP_PORT, PortRanges.fromString("8080+"))
-                .location(mgmt.getLocationRegistry().getLocationSpec("aws-ec2:eu-west-1").get())
+                .configure(BrooklynCampConstants.PLAN_ID, "gran-parent")
+                .location(mgmt.getLocationRegistry().getLocationSpec("localhost").get())
+                //.location(mgmt.getLocationRegistry().getLocationSpec("aws-ec2:eu-west-1").get())
                 ;
 
         //adding relations
@@ -135,6 +137,7 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
         //final TomcatServer gParent = app.createAndManageChild(gParentSpec);
         final TomcatServer son = app.createAndManageChild(sonSpec);
         final TomcatServer parent = app.createAndManageChild(parentSpec);
+        final TomcatServer gParent = app.createAndManageChild(gParentSpec);
 
 
         //mgmt.getLocationRegistry().getLocationSpec("aws-ec2:eu-west-2");
@@ -164,6 +167,7 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
 
 
         parent.relations().add(EntityRelations.HAS_TARGET, son);
+        gParent.relations().add(EntityRelations.HAS_TARGET, parent);
 
         log.info("************************ Relations SON:" + son.relations().getRelations(EntityRelations.TARGETTED_BY).size());
         log.info("************************ Relations Parent:" + parent.relations().getRelations(EntityRelations.TARGETTED_BY).size());
@@ -174,7 +178,7 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
 
 
 
-        final Map<String, String> childrenToMigrate = ImmutableMap.of("webapp1", "pivotal-ws2");
+        final Map<String, String> childrenToMigrate = ImmutableMap.of("webapp1", "pivotal-ws2", "parent", "pivotal-ws2");
         final Map<String, Map<String, String>> effectorParameters = ImmutableMap.of(ApplicationMigrateEffector.MIGRATE_CHILDREN_LOCATIONS_SPEC, childrenToMigrate);
 
         log.info("************************ READY TO MIGRATE *************");
@@ -200,6 +204,7 @@ public class ApplicationMigrationTest extends BrooklynAppLiveTestSupport {
 
         Asserts.succeedsEventually( MutableMap.of("timeout", new Duration(10, TimeUnit.MINUTES)), new Runnable() {
             public void run() {
+                assertTrue(gParent.getAttribute(TomcatServer.SERVICE_UP));
                 assertTrue(son.getAttribute(TomcatServer.SERVICE_PROCESS_IS_RUNNING));
                 assertTrue(son.getAttribute(TomcatServer.SERVICE_UP));
                 //assertTrue(app.getAttribute(Startable.SERVICE_UP));
