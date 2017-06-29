@@ -115,20 +115,22 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         }
 
 
-        for (final Map.Entry<String, String> entry : locationSpec.entrySet()) {
+        //for (final Map.Entry<String, String> entry : locationSpec.entrySet()) {
+        for (final String filteredEntityToStop : filtered) {
 
 
-            final EntityInternal child = (EntityInternal) findChildEntitySpecByPlanId(application, entry.getKey());
+            final EntityInternal child = (EntityInternal) findChildEntitySpecByPlanId(application, filteredEntityToStop);
 
             log.info("************************ FOUND CHILD0>:" + child.getConfig(BrooklynCampConstants.PLAN_ID) + " *************");
 
 
-            final String childLocation = entry.getValue();
 
             if (child == null) {
-                throw new RuntimeException("Child does not exist camp id: " + entry.getKey());
+                throw new RuntimeException("Child does not exist camp id: " + filteredEntityToStop);
             }
 
+
+            paralelizar el stop para que funcione como el start
             tasks.add(
                     //Task<Void> stopTask =
                     Tasks.<Void>builder()
