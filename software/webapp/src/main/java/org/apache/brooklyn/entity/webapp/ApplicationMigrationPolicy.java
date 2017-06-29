@@ -102,8 +102,8 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
         for (final String s : brothers) {
             log.info("************************ brother:" + s + " *************");
-            if(!checkChildExist(application, s)){
-              throw new IllegalArgumentException("Child "+s+" is not a child");
+            if (!checkChildExist(application, s)) {
+                throw new IllegalArgumentException("Child " + s + " is not a child");
             }
         }
 
@@ -124,13 +124,11 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             log.info("************************ FOUND CHILD0>:" + child.getConfig(BrooklynCampConstants.PLAN_ID) + " *************");
 
 
-
             if (child == null) {
                 throw new RuntimeException("Child does not exist camp id: " + filteredEntityToStop);
             }
 
 
-            paralelizar el stop para que funcione como el start
             tasks.add(
                     //Task<Void> stopTask =
                     Tasks.<Void>builder()
@@ -158,7 +156,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         }
 
 
-        ParallelTask<Void> invokeStopNode =
+        /*ParallelTask<Void> invokeStopNode =
                 new ParallelTask<Void>(
                         MutableMap.of(
                                 "displayName", " stop (parallel)",
@@ -172,7 +170,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         } catch (Throwable e) {
             ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
             Exceptions.propagate(e);
-        }
+        }*/
 
 
         //ya estan todos los nodos parados. Iniciarlos dentro de un for para hacer la ejecucion paralela
@@ -209,27 +207,67 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
         log.info("Ancestros OF == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
 
-        for (final Entity targetted : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
+        final List<TaskAdaptable<Void>> tasks = Lists.newArrayList();
+
+
+        for (final Entity ancestor : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
             //log.info("Ancestro== " + targetted.getConfig(BrooklynCampConstants.PLAN_ID));
-            if (ancestorCanBeStopped(targetted, brotherToMigrate)) {
+            if (entityIsUp(ancestor)) { //, brotherToMigrate)) {
                 //log.info("Ancestro TO STOP== " + targetted.getConfig(BrooklynCampConstants.PLAN_ID));
-                stopTargettedAncestors(targetted, brotherToMigrate);
+                //stopTargettedAncestors(targetted, brotherToMigrate);
+
+                tasks.add(
+                        //Task<Void> stopTask =
+                        Tasks.<Void>builder()
+                                .displayName("")
+                                        //.body(new StopElementsTask(child, brothers))
+                                .body(new StopParentsTask((EntityInternal) ancestor, brotherToMigrate))
+                                .build());
+
             }
 
         }
-        log.info("Total Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
-        //Task<Void> stopTask = entity.invoke(Startable.STOP, MutableMap.<String, Object>of());
-        try {
-            //DynamicTasks.queueIfPossible(stopTask).getTask().get();
 
+
+        ParallelTask<Void> invokeStopTasks =
+                new ParallelTask<Void>(
+                        MutableMap.of(
+                                "displayName", " stop (parallel)",
+                                "description", "stop tast"), tasks
+                );
+
+        try {
+            DynamicTasks.queue(invokeStopTasks).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
+            //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
         } catch (Throwable e) {
             ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
             Exceptions.propagate(e);
         }
-        log.info("Fin Total Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+
+
+
+
+        try {
+            if (brotherToMigrate.contains(getEntityName(entity))) {
+                log.info("Total Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+                //hay que pararlo completamente
+                entity.invoke(Startable.STOP, MutableMap.<String, Object>of("stopMachineMode",
+                        SoftwareProcess.StopSoftwareParameters.StopMode.NEVER)).get();
+                log.info("Fin Total Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+            } else {
+                log.info("Partial Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+                entity.invoke(Startable.STOP, MutableMap.<String, Object>of()).get();
+                log.info("Fin Partial Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+            }
+        } catch (Throwable e) {
+            ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
+            Exceptions.propagate(e);
+        }
+
+
     }
 
-    private boolean ancestorCanBeStopped(Entity targetted, List<String> brotherToMigrate) {
+    private boolean ancestorCanBeStopped(final Entity targetted, final List<String> brotherToMigrate) {
         return entityIsUp(targetted) && !entityPlanIdIsContained(targetted, brotherToMigrate);
     }
 
@@ -431,7 +469,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                 startEntityInLocation(entity, locationSpec.get(entityPlanId));
             } else {
                 log.info("*******************************");
-                log.info("******* RESTART location ***** => " + entity.getLocations().size());
+                log.info("******* RESTART location ***** => "+ getEntityName(entity) + "-" + entity.getLocations().size());
                 log.info("*******************************");
                 entity.invoke(Startable.RESTART, MutableMap.<String, Object>of()).blockUntilEnded();
             }
@@ -440,7 +478,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         private void startEntityInLocation(final EntityInternal entity, final String newLocation) {
             entity.clearLocations();
             log.info("*******************************");
-            log.info("******* START location ***** => " + entity.getLocations().size());
+            log.info("******* START location ***** => " + getEntityName(entity) + "-" + entity.getLocations().size());
             log.info("*******************************");
             Location loc = getManagementContext().getLocationRegistry().getLocationManaged(newLocation);
             //entity.invoke(Startable.START, MutableMap.<String, Object>of("locations", MutableList.of(newLocation))).blockUntilEnded();
@@ -530,7 +568,6 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
     }
 
 
-
     private boolean isInDescendant(final Entity entity, final String childId) {
         if (childId.equals(getEntityName(entity))) {
             return true;
@@ -548,22 +585,22 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
         final List<String> filtered = MutableList.of();
 
-        for(String entityToMigrateId : entitieToMigrateId) {
+        for (String entityToMigrateId : entitieToMigrateId) {
 
             final EntityInternal entityToMigrate = (EntityInternal) findChildEntitySpecByPlanId(app, entityToMigrateId);
-            if(!checkIfAnyEntityToMigrateIsDecendant(entityToMigrate, entitieToMigrateId)){
+            if (!checkIfAnyEntityToMigrateIsDecendant(entityToMigrate, entitieToMigrateId)) {
                 filtered.add(entityToMigrateId);
             }
         }
         return filtered;
     }
 
-    private boolean checkIfAnyEntityToMigrateIsDecendant(final Entity entity, List<String> entitieToMigrateId ) {
+    private boolean checkIfAnyEntityToMigrateIsDecendant(final Entity entity, List<String> entitieToMigrateId) {
 
         boolean result = false;
-        for(final String entityToMigrateId : entitieToMigrateId) {
+        for (final String entityToMigrateId : entitieToMigrateId) {
 
-            if(!getEntityName(entity).equals(entityToMigrateId)){
+            if (!getEntityName(entity).equals(entityToMigrateId)) {
                 result = result || isInDescendant(entity, entityToMigrateId);
             }
         }
