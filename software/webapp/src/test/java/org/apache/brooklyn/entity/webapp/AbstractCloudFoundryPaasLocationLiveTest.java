@@ -33,7 +33,7 @@ public abstract class AbstractCloudFoundryPaasLocationLiveTest extends BrooklynA
     protected BrooklynProperties brooklynProperties;
     protected LocalManagementContext managementContext;
     protected CloudFoundryPaasLocation cloudFoundryPaasLocation;
-    protected final String LOCATION_SPEC_NAME = "cloudfoundry-instance";
+    protected final String LOCATION_SPEC_NAME = "pivotal-ws2";
 
     @BeforeMethod
     public void setUp() throws Exception {

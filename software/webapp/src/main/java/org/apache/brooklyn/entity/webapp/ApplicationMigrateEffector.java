@@ -23,14 +23,17 @@ import java.util.Map;
 import org.apache.brooklyn.core.annotation.Effector;
 import org.apache.brooklyn.core.annotation.EffectorParam;
 import org.apache.brooklyn.core.effector.MethodEffector;
+import org.apache.brooklyn.util.collections.MutableMap;
 
 import com.google.common.annotations.Beta;
+import com.google.common.collect.ImmutableMap;
 
 @Beta
 public interface ApplicationMigrateEffector {
 
     public MethodEffector<Void> MIGRATE_APPLICATION = new MethodEffector<Void>(ApplicationMigrateEffector.class, "migrateChildren");
     public String MIGRATE_CHILDREN_LOCATIONS_SPEC = "childrenLocationsSpec";
+    public final static Map<String, String > EMPTY_CHILDREN =   ImmutableMap.of();
 
     /**
      * Starts a migration process.

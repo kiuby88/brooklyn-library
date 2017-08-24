@@ -53,11 +53,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.Beta;
+import com.google.common.base.CharMatcher;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 @Beta
-@Catalog(name = "Migration element", description = "")
+@Catalog(name = "Components migration", description = "")
 public class ApplicationMigrationPolicy extends AbstractPolicy {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationMigrationPolicy.class);
@@ -81,15 +83,60 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
     }
 
     private Effector<Void> migratteEffector() {
+
+
+
+
         return Effectors.effector(ApplicationMigrateEffector.MIGRATE_APPLICATION)
                 .impl(new EffectorBody<Void>() {
                     @Override
                     public Void call(ConfigBag parameters) {
-                        migrate((Application) entity, (Map<String, String>) parameters.getObjKeyMaybe(ApplicationMigrateEffector.MIGRATE_CHILDREN_LOCATIONS_SPEC).get());
+
+                        log.info("************************ MAP BEGINNING *************");
+
+
+
+
+                        final Map<String, String> map = getChildrenParameter(parameters);
+                        //final Map<String, String> map =
+                        //        (Map<String, String>) parameters
+                        //                .getStringKeyMaybe(ApplicationMigrateEffector.MIGRATE_CHILDREN_LOCATIONS_SPEC).get();
+
+
+                        for (final String key : map.keySet()) {
+                            log.info("************************ KEY = "+ key+" *- "+map.get(key)+ " -************");
+
+                        }
+
+                        log.info("************************ MAP END *************");
+
+                        migrate((Application) entity, map);
                         return null;
                     }
                 })
                 .build();
+    }
+
+    private Map<String, String> getChildrenParameter(final ConfigBag parameters) {
+
+        //final Map<String, String> map =
+        //        (Map<String, String>) parameters
+        //                .getStringKeyMaybe(ApplicationMigrateEffector.MIGRATE_CHILDREN_LOCATIONS_SPEC).get();
+
+        Object parameter = parameters
+                .getStringKeyMaybe(ApplicationMigrateEffector.MIGRATE_CHILDREN_LOCATIONS_SPEC).get();
+
+        if(parameter instanceof Map) {
+            return (Map<String, String>) parameter;
+        }
+
+
+        return Splitter.on(",")
+                .omitEmptyStrings()
+                //.trimResults()
+                .trimResults(CharMatcher.BREAKING_WHITESPACE)
+                .withKeyValueSeparator(": ")
+                .split((String) parameter);
     }
 
 
