@@ -63,7 +63,7 @@ public class MonitNodeImpl extends SoftwareProcessImpl implements MonitNode {
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         Location machine = Iterables.get(getLocations(), 0, null);
         
@@ -104,7 +104,7 @@ public class MonitNodeImpl extends SoftwareProcessImpl implements MonitNode {
     }
     
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         if (feed != null) feed.stop();
     }
 

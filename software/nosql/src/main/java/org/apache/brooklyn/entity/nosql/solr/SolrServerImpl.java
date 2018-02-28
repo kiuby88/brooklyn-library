@@ -47,8 +47,8 @@ public class SolrServerImpl extends SoftwareProcessImpl implements SolrServer {
 
     private volatile HttpFeed httpFeed;
 
-    @Override 
-    protected void connectSensors() {
+    @Override
+    public void connectSensors() {
         super.connectSensors();
 
         HostAndPort hp = BrooklynAccessUtils.getBrooklynAccessibleAddress(this, getSolrPort());

@@ -105,7 +105,7 @@ public class KarafContainerImpl extends SoftwareProcessImpl implements KarafCont
     }
     
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
 
         //FIXME should have a better way of setting config -- firstly, not here!
@@ -164,7 +164,7 @@ public class KarafContainerImpl extends SoftwareProcessImpl implements KarafCont
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         super.disconnectSensors();
         if (jmxFeed != null) jmxFeed.stop();
     }

@@ -58,7 +58,7 @@ public class MongoDBServerImpl extends SoftwareProcessImpl implements MongoDBSer
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         connectServiceUpIsRunning();
 
@@ -160,7 +160,7 @@ public class MongoDBServerImpl extends SoftwareProcessImpl implements MongoDBSer
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         super.disconnectSensors();
         disconnectServiceUpIsRunning();
         if (serviceStats != null) serviceStats.stop();

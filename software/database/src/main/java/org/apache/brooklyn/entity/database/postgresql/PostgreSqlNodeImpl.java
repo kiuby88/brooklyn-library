@@ -58,7 +58,7 @@ public class PostgreSqlNodeImpl extends SoftwareProcessImpl implements PostgreSq
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         connectServiceUpIsRunning();
         // in jdbc url it is postgresql:// but elsewhere it is usually postgres://
@@ -69,7 +69,7 @@ public class PostgreSqlNodeImpl extends SoftwareProcessImpl implements PostgreSq
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         disconnectServiceUpIsRunning();
         super.disconnectSensors();
     }

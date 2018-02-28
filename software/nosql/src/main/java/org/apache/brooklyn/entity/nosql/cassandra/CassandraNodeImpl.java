@@ -389,7 +389,7 @@ public class CassandraNodeImpl extends SoftwareProcessImpl implements CassandraN
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         // "cassandra" isn't really a protocol, but okay for now
         sensors().set(DATASTORE_URL, "cassandra://"+getAttribute(HOSTNAME)+":"+getAttribute(THRIFT_PORT));
         

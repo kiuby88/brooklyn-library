@@ -49,7 +49,7 @@ public class NodeJsWebAppServiceImpl extends SoftwareProcessImpl implements Node
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
 
         ConfigToAttributes.apply(this);

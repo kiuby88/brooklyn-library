@@ -18,6 +18,7 @@
  */
 package org.apache.brooklyn.entity.webapp;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -39,8 +40,10 @@ import org.apache.brooklyn.core.entity.EntityRelations;
 import org.apache.brooklyn.core.entity.lifecycle.Lifecycle;
 import org.apache.brooklyn.core.entity.lifecycle.ServiceStateLogic;
 import org.apache.brooklyn.core.entity.trait.Startable;
+import org.apache.brooklyn.core.objs.proxy.EntityProxyImpl;
 import org.apache.brooklyn.core.policy.AbstractPolicy;
 import org.apache.brooklyn.entity.software.base.SoftwareProcess;
+import org.apache.brooklyn.entity.software.base.SoftwareProcessImpl;
 import org.apache.brooklyn.util.collections.MutableList;
 import org.apache.brooklyn.util.collections.MutableMap;
 import org.apache.brooklyn.util.core.config.ConfigBag;
@@ -292,18 +295,27 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         }
 
 
+        if (!(entity instanceof SoftwareProcessImpl)) {
+        entity = (SoftwareProcessImpl) ((EntityProxyImpl) Proxy.getInvocationHandler(entity)).getDelegate();
+        }
+        log.info("************************ DISCONECTING SENSORS C :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+        //entityImpl.disconnectSensors();
+        ((SoftwareProcessImpl) entity).disconnectSensors();
+        log.info("************************ DISCONECTED SENSORS C :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
 
 
         try {
             if (brotherToMigrate.contains(getEntityName(entity))) {
                 log.info("Total Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
                 //hay que pararlo completamente
-                entity.invoke(Startable.STOP, MutableMap.<String, Object>of("stopMachineMode",
-                        SoftwareProcess.StopSoftwareParameters.StopMode.NEVER)).get();
+                        //entity.invoke(Startable.STOP, MutableMap.<String, Object>of("stopMachineMode",NEVER
+                        entity.invoke(Startable.STOP, MutableMap.<String, Object>of(SoftwareProcess.StopSoftwareParameters.STOP_MACHINE_MODE.getName(),
+                                SoftwareProcess.StopSoftwareParameters.StopMode.ALWAYS)).get();
                 log.info("Fin Total Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
             } else {
                 log.info("Partial Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
-                entity.invoke(Startable.STOP, MutableMap.<String, Object>of()).get();
+                entity.invoke(Startable.STOP, MutableMap.<String, Object>of(SoftwareProcess.StopSoftwareParameters.STOP_MACHINE_MODE.getName(),
+                        SoftwareProcess.StopSoftwareParameters.StopMode.NEVER)).get();
                 log.info("Fin Partial Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
             }
         } catch (Throwable e) {
@@ -339,6 +351,12 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         log.info("Partial Stopping == " + getEntityName(entity));
 
         try {
+
+            final SoftwareProcessImpl entityImpl = (SoftwareProcessImpl) ((EntityProxyImpl) Proxy.getInvocationHandler(entity)).getDelegate();
+            log.info("************************ DISCONECTING SENSORS :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+            entityImpl.disconnectSensors();
+            log.info("************************ DISCONECTED SENSORS :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+
             entity.invoke(Startable.STOP, MutableMap.<String, Object>of("stopMachineMode",
                     SoftwareProcess.StopSoftwareParameters.StopMode.NEVER)).get();
         } catch (Throwable e) {
@@ -428,8 +446,8 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         ParallelTask<Void> invokeStandUpTasks =
                 new ParallelTask<Void>(
                         MutableMap.of(
-                                "displayName", " stop (parallel)",
-                                "description", "stop tast"), tasks
+                                "displayName", " start (parallel)",
+                                "description", "start tast"), tasks
                 );
 
         try {
@@ -519,10 +537,16 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                 log.info("******* RESTART location ***** => "+ getEntityName(entity) + "-" + entity.getLocations().size());
                 log.info("*******************************");
                 entity.invoke(Startable.RESTART, MutableMap.<String, Object>of()).blockUntilEnded();
+                //final SoftwareProcessImpl entityImpl = (SoftwareProcessImpl) ((EntityProxyImpl) Proxy.getInvocationHandler(entity)).getDelegate();
+                log.info("************************ WAITTING RESTART :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+                //entityImpl.waitForServiceUp();
+                ((SoftwareProcessImpl)entity).waitForServiceUp();
+                log.info("************************ WAIT RESTART :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+
             }
         }
 
-        private void startEntityInLocation(final EntityInternal entity, final String newLocation) {
+        private void startEntityInLocation(EntityInternal entity, final String newLocation) {
             entity.clearLocations();
             log.info("*******************************");
             log.info("******* START location ***** => " + getEntityName(entity) + "-" + entity.getLocations().size());
@@ -531,6 +555,13 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             //entity.invoke(Startable.START, MutableMap.<String, Object>of("locations", MutableList.of(newLocation))).blockUntilEnded();
             entity.addLocations(ImmutableList.of(loc));
             entity.invoke(Startable.START, MutableMap.<String, Object>of("locations", MutableList.of())).blockUntilEnded();
+            if(!(entity instanceof SoftwareProcessImpl)){
+                entity = (SoftwareProcessImpl) ((EntityProxyImpl) Proxy.getInvocationHandler(entity)).getDelegate();
+
+            }
+            log.info("************************ WAITTING START :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+            ((SoftwareProcessImpl)entity).waitForServiceUp();
+            log.info("************************ WAIT START :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
         }
 
 

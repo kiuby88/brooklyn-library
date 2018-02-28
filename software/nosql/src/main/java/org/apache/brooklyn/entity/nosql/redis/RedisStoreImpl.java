@@ -53,7 +53,7 @@ public class RedisStoreImpl extends SoftwareProcessImpl implements RedisStore {
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
 
         connectServiceUpIsRunning();

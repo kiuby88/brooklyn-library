@@ -119,7 +119,7 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         return applicationWarUrl;
     }
 
-    protected String getApplicationName() {
+    public String getApplicationName() {
         return applicationName;
     }
 

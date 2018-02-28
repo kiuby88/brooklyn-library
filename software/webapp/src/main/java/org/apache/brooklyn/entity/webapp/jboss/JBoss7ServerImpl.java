@@ -71,7 +71,7 @@ public class JBoss7ServerImpl extends JavaWebAppSoftwareProcessImpl implements J
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
 
         HostAndPort hp = BrooklynAccessUtils.getBrooklynAccessibleAddress(this,
@@ -150,7 +150,7 @@ public class JBoss7ServerImpl extends JavaWebAppSoftwareProcessImpl implements J
     }
     
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         super.disconnectSensors();
         
         if (httpFeed != null) httpFeed.stop();

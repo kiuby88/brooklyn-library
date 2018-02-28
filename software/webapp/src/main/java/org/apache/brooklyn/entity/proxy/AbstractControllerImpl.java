@@ -323,7 +323,7 @@ public abstract class AbstractControllerImpl extends SoftwareProcessImpl impleme
     }
     
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         // TODO when rebind policies, and rebind calls connectSensors, then this will cause problems.
         // Also relying on addServerPoolMemberTrackingPolicy to set the serverPoolAddresses and serverPoolTargets.

@@ -45,7 +45,7 @@ public class CrateNodeImpl extends SoftwareProcessImpl implements CrateNode{
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         connectServiceUpIsRunning();
         jmxFeed = JavaAppUtils.connectMXBeanSensors(this);
@@ -81,7 +81,7 @@ public class CrateNodeImpl extends SoftwareProcessImpl implements CrateNode{
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         disconnectServiceUpIsRunning();
         if (jmxFeed != null) jmxFeed.stop();
         if (httpFeed != null) httpFeed.stop();

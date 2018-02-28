@@ -65,7 +65,7 @@ public class StormImpl extends SoftwareProcessImpl implements Storm {
     }
     
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
 
         // give it plenty of time to start before we advertise ourselves

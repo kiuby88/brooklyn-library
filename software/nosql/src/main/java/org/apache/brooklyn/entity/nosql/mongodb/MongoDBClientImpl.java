@@ -24,7 +24,7 @@ import org.apache.brooklyn.entity.software.base.SoftwareProcessImpl;
 public class MongoDBClientImpl extends SoftwareProcessImpl implements MongoDBClient {
     
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         sensors().set(Startable.SERVICE_UP, true);
     }

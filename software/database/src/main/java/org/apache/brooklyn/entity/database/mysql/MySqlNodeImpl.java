@@ -85,7 +85,7 @@ public class MySqlNodeImpl extends SoftwareProcessImpl implements MySqlNode {
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         sensors().set(DATASTORE_URL, String.format("mysql://%s:%s/", getAttribute(HOSTNAME), getAttribute(MYSQL_PORT)));
         
@@ -127,7 +127,7 @@ public class MySqlNodeImpl extends SoftwareProcessImpl implements MySqlNode {
     }
     
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         if (feed != null) feed.stop();
         super.disconnectSensors();
     }

@@ -92,7 +92,7 @@ public class SimulatedJBoss7ServerImpl extends JBoss7ServerImpl {
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         boolean simulateEntity = getConfig(SIMULATE_ENTITY);
         boolean simulateExternalMonitoring = getConfig(SIMULATE_EXTERNAL_MONITORING);
 
@@ -152,7 +152,7 @@ public class SimulatedJBoss7ServerImpl extends JBoss7ServerImpl {
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         super.disconnectSensors();
         if (httpFeed != null) httpFeed.stop();
         if (functionFeed != null) functionFeed.stop();

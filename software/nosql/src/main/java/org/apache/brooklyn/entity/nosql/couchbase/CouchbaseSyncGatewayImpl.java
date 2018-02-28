@@ -38,7 +38,7 @@ public class CouchbaseSyncGatewayImpl extends SoftwareProcessImpl implements Cou
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         connectServiceUpIsRunning();
     }
@@ -64,7 +64,7 @@ public class CouchbaseSyncGatewayImpl extends SoftwareProcessImpl implements Cou
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         super.disconnectSensors();
         disconnectServiceUpIsRunning();
     }

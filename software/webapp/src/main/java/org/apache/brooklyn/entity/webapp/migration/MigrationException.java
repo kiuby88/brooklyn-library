@@ -16,21 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.brooklyn.entity.nosql.mongodb.sharding;
+package org.apache.brooklyn.entity.webapp.migration;
 
-import org.apache.brooklyn.entity.software.base.SoftwareProcessImpl;
+/**
+ * Created by Jose on 21/01/18.
+ */
+public class MigrationException extends RuntimeException {
 
-public class MongoDBConfigServerImpl extends SoftwareProcessImpl implements MongoDBConfigServer {
-
-    @Override
-    public Class<?> getDriverInterface() {
-        return MongoDBConfigServerDriver.class;
-    }
-    
-    @Override
-    public void connectSensors() {
-        super.connectSensors();
-        connectServiceUpIsRunning();
+    public MigrationException(){
+        super();
     }
 
+    public MigrationException(final String message){
+        super(message);
+    }
 }

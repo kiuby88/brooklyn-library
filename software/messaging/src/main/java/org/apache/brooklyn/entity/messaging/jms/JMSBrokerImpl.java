@@ -81,7 +81,7 @@ public abstract class JMSBrokerImpl<Q extends JMSDestination & Queue, T extends 
     }
     
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         setBrokerUrl();
     }

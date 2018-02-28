@@ -86,7 +86,7 @@ public class RabbitBrokerImpl extends SoftwareProcessImpl implements RabbitBroke
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
 
         connectServiceUpIsRunning();

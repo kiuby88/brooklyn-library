@@ -58,8 +58,8 @@ public class CouchDBNodeImpl extends SoftwareProcessImpl implements CouchDBNode 
 
     private volatile HttpFeed httpFeed;
 
-    @Override 
-    protected void connectSensors() {
+    @Override
+    public void connectSensors() {
         super.connectSensors();
 
         connectServiceUpIsRunning();

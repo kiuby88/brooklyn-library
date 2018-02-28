@@ -69,7 +69,7 @@ public abstract class AbstractZooKeeperImpl extends SoftwareProcessImpl implemen
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         connectServiceUpIsRunning();
 
         if (((JavaSoftwareProcessDriver)getDriver()).isJmxEnabled()) {

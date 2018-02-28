@@ -93,7 +93,7 @@ public class Jetty6ServerImpl extends JavaWebAppSoftwareProcessImpl implements J
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         if (jmxFeedJetty != null) jmxFeedJetty.stop();
         if (jmxFeedMx != null) jmxFeedMx.stop();
         super.disconnectSensors();

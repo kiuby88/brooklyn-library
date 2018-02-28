@@ -38,7 +38,7 @@ public class MongoDBRouterImpl extends SoftwareProcessImpl implements MongoDBRou
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         functionFeed = FunctionFeed.builder()
                 .entity(this)
@@ -78,7 +78,7 @@ public class MongoDBRouterImpl extends SoftwareProcessImpl implements MongoDBRou
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         super.disconnectSensors();
         if (functionFeed != null) functionFeed.stop();
     }

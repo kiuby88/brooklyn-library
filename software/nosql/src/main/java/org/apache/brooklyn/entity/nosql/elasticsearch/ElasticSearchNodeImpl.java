@@ -67,7 +67,7 @@ public class ElasticSearchNodeImpl extends SoftwareProcessImpl implements Elasti
     }
     
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         Integer rawPort = getAttribute(HTTP_PORT);
         String hostname = getAttribute(HOSTNAME);
@@ -120,7 +120,7 @@ public class ElasticSearchNodeImpl extends SoftwareProcessImpl implements Elasti
     }
     
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         if (httpFeed != null) {
             httpFeed.stop();
         }

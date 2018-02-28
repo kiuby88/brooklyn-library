@@ -106,7 +106,7 @@ public class QpidBrokerImpl extends JMSBrokerImpl<QpidQueue, QpidTopic> implemen
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         String serverInfoMBeanName = "org.apache.qpid:type=ServerInformation,name=ServerInformation";
 

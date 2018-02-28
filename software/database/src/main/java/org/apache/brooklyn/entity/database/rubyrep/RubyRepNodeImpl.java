@@ -29,7 +29,7 @@ import org.apache.brooklyn.util.time.Duration;
 public class RubyRepNodeImpl extends SoftwareProcessImpl implements RubyRepNode {
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
         connectServiceUpIsRunning();
     }

@@ -121,7 +121,7 @@ public class SimulatedNginxControllerImpl extends NginxControllerImpl {
     }
 
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         super.disconnectSensors();
         if (httpFeed != null) httpFeed.stop();
         if (functionFeed != null) functionFeed.stop();

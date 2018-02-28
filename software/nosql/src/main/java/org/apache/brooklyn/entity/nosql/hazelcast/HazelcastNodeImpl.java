@@ -46,7 +46,7 @@ public class HazelcastNodeImpl extends SoftwareProcessImpl implements HazelcastN
     }
     
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         super.connectSensors();
 
         if (LOG.isDebugEnabled()) {
@@ -73,7 +73,7 @@ public class HazelcastNodeImpl extends SoftwareProcessImpl implements HazelcastN
     }
     
     @Override
-    protected void disconnectSensors() {
+    public void disconnectSensors() {
         if (httpFeed != null) {
             httpFeed.stop();
         }

@@ -54,7 +54,7 @@ public class SimulatedMySqlNodeImpl extends MySqlNodeImpl {
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         boolean simulateExternalMonitoring = getConfig(SIMULATE_EXTERNAL_MONITORING);
         if (simulateExternalMonitoring) {
             sensors().set(DATASTORE_URL, String.format("mysql://%s:%s/", getAttribute(HOSTNAME), getAttribute(MYSQL_PORT)));

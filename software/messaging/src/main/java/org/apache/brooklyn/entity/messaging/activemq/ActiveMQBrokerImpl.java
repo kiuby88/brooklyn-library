@@ -86,7 +86,7 @@ public class ActiveMQBrokerImpl extends JMSBrokerImpl<ActiveMQQueue, ActiveMQTop
     }
 
     @Override     
-    protected void connectSensors() {
+    public void connectSensors() {
         sensors().set(BROKER_URL, String.format("tcp://%s:%d", getAttribute(HOSTNAME), getAttribute(OPEN_WIRE_PORT)));
         
         String brokerMbeanName = "org.apache.activemq:type=Broker,brokerName=" + getBrokerName();

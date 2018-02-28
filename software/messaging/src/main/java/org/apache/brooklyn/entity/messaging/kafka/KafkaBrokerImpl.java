@@ -85,7 +85,7 @@ public class KafkaBrokerImpl extends SoftwareProcessImpl implements MessageBroke
     }
 
     @Override
-    protected void connectSensors() {
+    public void connectSensors() {
         connectServiceUpIsRunning();
         boolean retrieveUsageMetrics = getConfig(RETRIEVE_USAGE_METRICS);
         
