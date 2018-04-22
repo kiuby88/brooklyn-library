@@ -53,7 +53,7 @@ public class ReleaseTaskSupplierFactory {
         final EntityDriver driver = getDriver(entity);
 
         return Tasks.<Void>builder()
-                .displayName("start " + entity.getDisplayName())
+                .displayName("release task # " + entity.getDisplayName())
                 .body(getSupplier(entity, driver))
                 .build();
     }

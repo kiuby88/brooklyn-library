@@ -182,7 +182,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             tasks.add(
                     //Task<Void> stopTask =
                     Tasks.<Void>builder()
-                            .displayName("stopping (machine)")
+                            .displayName("stop # (machine)")
                             .body(new StopParentsTask(child, brothers))
                                     //.flags(stopMachineFlags)
                             .build());
@@ -198,7 +198,10 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
 
         try {
+            if(!tasks.isEmpty()){
+
             DynamicTasks.queue(invoke).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
+            }
             //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
         } catch (Throwable e) {
             ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
@@ -269,7 +272,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                 tasks.add(
                         //Task<Void> stopTask =
                         Tasks.<Void>builder()
-                                .displayName("")
+                                .displayName("stop targetted entities#")
                                         //.body(new StopElementsTask(child, brothers))
                                 .body(new StopParentsTask((EntityInternal) ancestor, brotherToMigrate))
                                 .build());
@@ -287,7 +290,9 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                 );
 
         try {
+            if(!tasks.isEmpty()){
             DynamicTasks.queue(invokeStopTasks).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
+            }
             //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
         } catch (Throwable e) {
             ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
@@ -383,7 +388,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             tasks.add(
                     //Task<Void> stopTask =
                     Tasks.<Void>builder()
-                            .displayName("stopping (machine)")
+                            .displayName("stopping (machine) #")
                                     //.body(new StopElementsTask(child, brothers))
                             .body(new StopNodeTask(node))
                             .build());
@@ -437,7 +442,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             tasks.add(
                     //Task<Void> stopTask =
                     Tasks.<Void>builder()
-                            .displayName("start (machine)")
+                            .displayName("start (machine)#")
                             .body(new StartNodesTask(child, locationSpec))
                                     //.flags(stopMachineFlags)
                             .build());
@@ -451,7 +456,10 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                 );
 
         try {
+            if(!tasks.isEmpty()){
             DynamicTasks.queue(invokeStandUpTasks).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
+
+            }
             //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
         } catch (Throwable e) {
             ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
@@ -494,7 +502,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             final List<TaskAdaptable<Void>> standUptTasks = Lists.newArrayList();
             for (final Entity targetted : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
                 standUptTasks.add(Tasks.<Void>builder()
-                        .displayName("start (machine)")
+                        .displayName("start (machine) #")
                         .body(new StartNodesTask((EntityInternal) targetted, locationSpec))
                         .build());
             }
@@ -508,7 +516,10 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
                             standUptTasks);
 
             try {
+                if(!standUptTasks.isEmpty()){
+
                 DynamicTasks.queue(invokeStandUpNode).get();//.orSubmitAsync(application).asTask().blockUntilEnded();
+                }
                 //DynamicTasks.queueIfPossible(invoke).orSubmitAsync(application).asTask().get();
             } catch (Throwable e) {
                 ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
