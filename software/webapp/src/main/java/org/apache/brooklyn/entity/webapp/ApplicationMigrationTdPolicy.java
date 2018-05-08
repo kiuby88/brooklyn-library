@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.brooklyn.api.catalog.Catalog;
 import org.apache.brooklyn.api.effector.Effector;
@@ -34,7 +35,6 @@ import org.apache.brooklyn.api.mgmt.TaskAdaptable;
 import org.apache.brooklyn.camp.brooklyn.BrooklynCampConstants;
 import org.apache.brooklyn.core.effector.EffectorBody;
 import org.apache.brooklyn.core.effector.Effectors;
-import org.apache.brooklyn.core.entity.Attributes;
 import org.apache.brooklyn.core.entity.EntityInternal;
 import org.apache.brooklyn.core.entity.EntityRelations;
 import org.apache.brooklyn.core.entity.lifecycle.Lifecycle;
@@ -68,6 +68,8 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationMigrationTdPolicy.class);
     private ReleaseTaskSupplierFactory releaseFactory = new ReleaseTaskSupplierFactory();
+    private final Map<String, Lifecycle> componentStatus = new ConcurrentHashMap<>();
+
 
     @Override
     public void setEntity(EntityLocal entity) {
@@ -157,13 +159,14 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
                                 "displayName", " release (parallel)",
                                 "description", "release tasks"), releaseTasks
                 );
-        if(!releaseTasks.isEmpty()){
-        try {
-            DynamicTasks.queue(parallelTask).get();
-        } catch (Throwable e) {
-            ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
-            Exceptions.propagate(e);
-        }}
+        if (!releaseTasks.isEmpty()) {
+            try {
+                DynamicTasks.queue(parallelTask).get();
+            } catch (Throwable e) {
+                ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
+                Exceptions.propagate(e);
+            }
+        }
     }
 
     private void restartComponents(final Application application, final List<String> filtered) {
@@ -184,7 +187,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
             restartTasks.add(
                     //Task<Void> stopTask =
                     Tasks.<Void>builder()
-                            .displayName("restart task #"+child.getConfig(BrooklynCampConstants.PLAN_ID))
+                            .displayName("restart task #" + child.getConfig(BrooklynCampConstants.PLAN_ID))
                             .body(new RestartParentsTask(child))
                             .build());
         }
@@ -196,14 +199,14 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
                                 "description", "restart tasks"), restartTasks
                 );
 
-        if(!restartTasks.isEmpty()){
+        if (!restartTasks.isEmpty()) {
 
-        try {
-            DynamicTasks.queue(invokeStandUpTasks).get();
-        } catch (Throwable e) {
-            ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
-            Exceptions.propagate(e);
-        }
+            try {
+                DynamicTasks.queue(invokeStandUpTasks).get();
+            } catch (Throwable e) {
+                ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
+                Exceptions.propagate(e);
+            }
         }
     }
 
@@ -338,7 +341,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
                 log.info("************************ IS STOPPABLE THE PARENT:  *************" + ancestor.getConfig(BrooklynCampConstants.PLAN_ID));
                 stopParents.add(
                         Tasks.<Void>builder()
-                                .displayName("Stopping component and Parents 1 #"+ancestor.getConfig(BrooklynCampConstants.PLAN_ID))
+                                .displayName("Stopping component and Parents 1 #" + ancestor.getConfig(BrooklynCampConstants.PLAN_ID))
                                 .body(new StopComponentAndParentsTask((EntityInternal) ancestor))
                                 .build());
 
@@ -352,7 +355,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
                                 "description", "stop tast"), stopParents
                 );
 
-        if(!stopParents.isEmpty()) {
+        if (!stopParents.isEmpty()) {
             try {
                 log.info("************************ Stopping targetted entities of (" + stopParents.size() + "):  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
                 DynamicTasks.queue(invokeStopTasks).get();
@@ -393,7 +396,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
                 log.info("************************ IS STOPPABLE 2:  *************" + ancestor.getConfig(BrooklynCampConstants.PLAN_ID));
                 stopParents.add(
                         Tasks.<Void>builder()
-                                .displayName("Stopping component and Parents #"+ancestor.getConfig(BrooklynCampConstants.PLAN_ID))
+                                .displayName("Stopping component and Parents #" + ancestor.getConfig(BrooklynCampConstants.PLAN_ID))
 
                                 .body(new StopComponentAndParentsTask((EntityInternal) ancestor))
                                 .build());
@@ -407,7 +410,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
                                 "displayName", " stop (parallel)",
                                 "description", "stop tast"), stopParents
                 );
-        if(!stopParents.isEmpty()) {
+        if (!stopParents.isEmpty()) {
             try {
                 log.info("************************ STOPING PARENTS OF 2 (" + stopParents.size() + "):  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
                 DynamicTasks.queue(invokeStopTasks).get();
@@ -424,15 +427,27 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
     private void stopComponent(final EntityInternal entity) {
         try {
 
-            MutableMap<String, Object> parameters = MutableMap.<String, Object>of(
-                    SoftwareProcess.StopSoftwareParameters.STOP_MACHINE_MODE.getName(), SoftwareProcess.StopSoftwareParameters.StopMode.NEVER,
-                    SoftwareProcess.StopSoftwareParameters.STOP_PROCESS_MODE.getName(), SoftwareProcess.StopSoftwareParameters.StopMode.IF_NOT_STOPPED
-            );
+            if (!componentStatus.containsKey(entity.getConfig(BrooklynCampConstants.PLAN_ID))) {
 
-            if(entityIsUp(entity)) {
+                synchronized (componentStatus) {
+                    if (componentStatus.containsKey(entity.getConfig(BrooklynCampConstants.PLAN_ID))) {
+                        log.info("#########%%%@@@ Skipping stop task for *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+                        return;
+                    }
+                    componentStatus.put(entity.getConfig(BrooklynCampConstants.PLAN_ID), Lifecycle.STOPPING);
+                }
+
+                waitAllParentsStopped(entity);
+
+                MutableMap<String, Object> parameters = MutableMap.<String, Object>of(
+                        SoftwareProcess.StopSoftwareParameters.STOP_MACHINE_MODE.getName(), SoftwareProcess.StopSoftwareParameters.StopMode.NEVER,
+                        SoftwareProcess.StopSoftwareParameters.STOP_PROCESS_MODE.getName(), SoftwareProcess.StopSoftwareParameters.StopMode.IF_NOT_STOPPED
+                );
+
                 log.info("Partial Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
                 entity.invoke(Startable.STOP, parameters).get();
                 log.info("Fin Partial Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+
             }
         } catch (Throwable e) {
             ServiceStateLogic.setExpectedState(entity, Lifecycle.ON_FIRE);
@@ -485,9 +500,15 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
          */
         log.info("Getting UP of " + entity.getConfig(BrooklynCampConstants.PLAN_ID) + " ==" + entity.getAttribute(Startable.SERVICE_UP));
 
+
         return entity.getAttribute(Startable.SERVICE_UP)
                 && entity.getAttribute(SoftwareProcess.SERVICE_PROCESS_IS_RUNNING)
-                && entity.getAttribute(Attributes.SERVICE_STATE_ACTUAL) == Lifecycle.RUNNING; //Aqui puse esto
+                && entity.getAttribute(SoftwareProcess.SERVICE_STATE_ACTUAL) == Lifecycle.RUNNING
+                && entity.getAttribute(SoftwareProcess.SERVICE_STATE_EXPECTED).getState() == Lifecycle.RUNNING;
+
+
+        //if (entity().getAttribute(SoftwareProcess.SERVICE_STATE_ACTUAL) == Lifecycle.STOPPED) {
+        //    ServiceStateLogic.setExpectedState(entity(), Lifecycle.STOPPING);
     }
 
     private boolean entityPlanIdIsContained(Entity entity, List<String> brotherToMigrate) {
@@ -634,7 +655,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
 
             for (final Entity targetted : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
                 standUpParentstTasks.add(Tasks.<Void>builder()
-                        .displayName("Restart component and Parents #"+entityPlanId)
+                        .displayName("Restart component and Parents #" + entityPlanId)
                         .body(new RestartNodesAndParentsTask((EntityInternal) targetted))
                         .build());
             }
@@ -646,7 +667,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
                                     "description", "restart"),
                             standUpParentstTasks);
 
-            if(!standUpParentstTasks.isEmpty()) {
+            if (!standUpParentstTasks.isEmpty()) {
 
                 try {
                     DynamicTasks.queue(invokeStandUpNode).get();
@@ -689,7 +710,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
             final List<TaskAdaptable<Void>> standUptTasks = Lists.newArrayList();
             for (final Entity targetted : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
                 standUptTasks.add(Tasks.<Void>builder()
-                        .displayName("Restart component and Parents #"+entityPlanId)
+                        .displayName("Restart component and Parents #" + entityPlanId)
                         .body(new RestartNodesAndParentsTask((EntityInternal) targetted))
                         .build());
             }
@@ -701,7 +722,7 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
                                     "description", "restart"),
                             standUptTasks);
 
-            if(!standUptTasks.isEmpty()) {
+            if (!standUptTasks.isEmpty()) {
 
                 try {
                     DynamicTasks.queue(invokeStandUpNode).get();
@@ -746,6 +767,62 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
         }
         return true;
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private void waitAllParentsStopped(EntityInternal entity){
+        //se sacan todas las entities por le padre
+        //aqui
+
+        boolean anyIsRunning = true;
+        log.info("Checking ALL PARENTS RUNNING for " + getEntityName(entity));
+
+
+        while(anyIsRunning) {
+            anyIsRunning = anyParentRunning(entity);
+
+            if(anyIsRunning){
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException("Error waiting between deployments " + getEntityName(entity));
+                }
+            } else {
+                log.info("ALL PARENTS RUNNING for " + getEntityName(entity));
+            }
+        }
+
+    }
+
+    private boolean anyParentRunning(EntityInternal entity){
+
+        boolean anyIsRunning = false;
+
+        for (final Entity target : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
+            anyIsRunning = anyIsRunning || entityIsUp(target);
+        }
+        return anyIsRunning;
+
+    }
+
+
+
+
+
+
+
+
+
 
 
 }

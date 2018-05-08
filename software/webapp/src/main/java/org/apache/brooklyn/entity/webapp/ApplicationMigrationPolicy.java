@@ -22,6 +22,7 @@ import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.brooklyn.api.catalog.Catalog;
 import org.apache.brooklyn.api.effector.Effector;
@@ -67,6 +68,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationMigrationPolicy.class);
 
+    private final Map<String, Lifecycle> componentStatus = new ConcurrentHashMap<>();
 
     @Override
     public void setEntity(EntityLocal entity) {
@@ -227,6 +229,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
 
         //ya estan todos los nodos parados. Iniciarlos dentro de un for para hacer la ejecucion paralela
+        componentStatus.clear();
         startNodes(application, locationSpec);
 
 
@@ -249,7 +252,20 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             log.info("************************ funcionando *************");
 
 
-            stopTargettedEntities(entity, brotherToMigrate);
+            if (!componentStatus.containsKey(entity.getConfig(BrooklynCampConstants.PLAN_ID))) {
+
+
+
+                synchronized (componentStatus) {
+                    if (componentStatus.containsKey(entity.getConfig(BrooklynCampConstants.PLAN_ID))) {
+                        log.info("#########%%%@@@ Skipping stop task for *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
+                        return null;
+                    }
+                    componentStatus.put(entity.getConfig(BrooklynCampConstants.PLAN_ID), Lifecycle.STOPPING);
+                }
+
+                stopTargettedEntities(entity, brotherToMigrate);
+            }
 
             return null;
         }
@@ -309,6 +325,7 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         log.info("************************ DISCONECTED SENSORS C :  *************" + entity.getConfig(BrooklynCampConstants.PLAN_ID));
 
 
+        waitAllParentsStopped(entity);
         try {
             if (brotherToMigrate.contains(getEntityName(entity))) {
                 log.info("Total Stopping == " + entity.getConfig(BrooklynCampConstants.PLAN_ID));
@@ -328,6 +345,41 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
             Exceptions.propagate(e);
         }
 
+
+    }
+
+    private void waitAllParentsStopped(EntityInternal entity){
+        //se sacan todas las entities por le padre
+        //aqui
+
+        boolean anyIsRunning = true;
+        log.info("Checking ALL PARENTS RUNNING for " + getEntityName(entity));
+
+
+        while(anyIsRunning) {
+            anyIsRunning = anyParentRunning(entity);
+
+            if(anyIsRunning){
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException("Error waiting between deployments " + getEntityName(entity));
+                }
+            } else {
+                log.info("ALL PARENTS RUNNING for " + getEntityName(entity));
+            }
+        }
+
+    }
+
+    private boolean anyParentRunning(EntityInternal entity){
+
+        boolean anyIsRunning = false;
+
+        for (final Entity target : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
+            anyIsRunning = anyIsRunning || entityIsUp(target);
+        }
+        return anyIsRunning;
 
     }
 
@@ -431,13 +483,11 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
 
             final EntityInternal child = (EntityInternal) findChildEntitySpecByPlanId(application, entry.getKey());
 
-            log.info("************************ FOUND CHILD0>:" + child.getConfig(BrooklynCampConstants.PLAN_ID) + " *************");
-
-
             if (child == null) {
-                throw new RuntimeException("Child does not exist camp id: " + entry.getKey());
+                throw new RuntimeException("START NODES Child does not exist camp id: " + entry.getKey());
             }
 
+            log.info("************************ START NODES FOUND CHILD0>:" + child.getConfig(BrooklynCampConstants.PLAN_ID) + " *************");
 
             tasks.add(
                     //Task<Void> stopTask =
