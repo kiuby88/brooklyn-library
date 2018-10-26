@@ -377,10 +377,15 @@ public class ApplicationMigrationPolicy extends AbstractPolicy {
         boolean anyIsRunning = false;
 
         for (final Entity target : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
-            anyIsRunning = anyIsRunning || entityIsUp(target);
+            anyIsRunning = anyIsRunning || !statusIsStopped(target);//entityIsUp(target);
         }
         return anyIsRunning;
 
+    }
+
+
+    private boolean statusIsStopped(Entity entityInternal){
+        return Lifecycle.STOPPED.equals(ServiceStateLogic.getExpectedState(entityInternal));
     }
 
     private boolean ancestorCanBeStopped(final Entity targetted, final List<String> brotherToMigrate) {

@@ -31,7 +31,7 @@ import com.google.common.collect.ImmutableMap;
 @Beta
 public interface ApplicationMigrateEffector {
 
-    public MethodEffector<Void> MIGRATE_APPLICATION = new MethodEffector<Void>(ApplicationMigrateEffector.class, "migrateChildren");
+    public MethodEffector<Void> MIGRATE_APPLICATION = new MethodEffector<Void>(ApplicationMigrateEffector.class, "MigrateApp");
     public String MIGRATE_CHILDREN_LOCATIONS_SPEC = "childrenLocationsSpec";
     public final static Map<String, String > EMPTY_CHILDREN =   ImmutableMap.of();
 

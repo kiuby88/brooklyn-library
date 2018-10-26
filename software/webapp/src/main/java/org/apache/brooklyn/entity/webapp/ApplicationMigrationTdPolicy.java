@@ -63,7 +63,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 @Beta
-@Catalog(name = "Components migration", description = "")
+@Catalog(name = "Application migration", description = "")
 public class ApplicationMigrationTdPolicy extends AbstractPolicy {
 
     private static final Logger log = LoggerFactory.getLogger(ApplicationMigrationTdPolicy.class);
@@ -809,7 +809,8 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
         boolean anyIsRunning = false;
 
         for (final Entity target : entity.relations().getRelations(EntityRelations.TARGETTED_BY)) {
-            anyIsRunning = anyIsRunning || entityIsUp(target);
+            anyIsRunning = anyIsRunning || !statusIsStopped(target);
+            //tengo que poner aqui que chequee que la entiti este PARADA usando el status ==  stop xq sino no va a funcionar
         }
         return anyIsRunning;
 
@@ -818,7 +819,9 @@ public class ApplicationMigrationTdPolicy extends AbstractPolicy {
 
 
 
-
+    private boolean statusIsStopped(Entity entityInternal){
+        return Lifecycle.STOPPED.equals(ServiceStateLogic.getExpectedState(entityInternal));
+    }
 
 
 
