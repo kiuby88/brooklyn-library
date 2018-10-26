@@ -31,8 +31,8 @@ import com.google.common.collect.ImmutableMap;
 @Beta
 public interface ApplicationMigrateEffector {
 
-    public MethodEffector<Void> MIGRATE_APPLICATION = new MethodEffector<Void>(ApplicationMigrateEffector.class, "MigrateApp");
-    public String MIGRATE_CHILDREN_LOCATIONS_SPEC = "childrenLocationsSpec";
+    public MethodEffector<Void> MIGRATE_APPLICATION = new MethodEffector<Void>(ApplicationMigrateEffector.class, "migrateApp");
+    public String MIGRATE_CHILDREN_LOCATIONS_SPEC = "migrateMap";
     public final static Map<String, String > EMPTY_CHILDREN =   ImmutableMap.of();
 
     /**
@@ -42,6 +42,6 @@ public interface ApplicationMigrateEffector {
      * After this process finishes it refreshes all the sibling entities dependent data (ConfigKeys, Env variables...)
      */
     @Beta
-    @Effector(description = "Migrates the application's children entity to different location.")
+    @Effector(description = "Migrates the application's children to different location")
     void migrateChildren(@EffectorParam(name = MIGRATE_CHILDREN_LOCATIONS_SPEC, description = "Children Location Specs", nullable = false) Map<String, String> childrenLocationsSpec);
 }
