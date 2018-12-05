@@ -42,6 +42,6 @@ public interface ApplicationMigrateEffector {
      * After this process finishes it refreshes all the sibling entities dependent data (ConfigKeys, Env variables...)
      */
     @Beta
-    @Effector(description = "Migrates the application's children to different location")
-    void migrateChildren(@EffectorParam(name = MIGRATE_CHILDREN_LOCATIONS_SPEC, description = "Children Location Specs", nullable = false) Map<String, String> childrenLocationsSpec);
+    @Effector(description = "Migrates the application's children to different locations")
+    void migrateApp(@EffectorParam(name = MIGRATE_CHILDREN_LOCATIONS_SPEC, description = "Children Location Specs", nullable = false) Map<String, String> migrateMap);
 }
