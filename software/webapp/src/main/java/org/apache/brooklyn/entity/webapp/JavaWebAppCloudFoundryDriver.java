@@ -261,6 +261,15 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         staging = new Staging(null, getBuildpack());
         uris.add(inferApplicationDomainUri(getApplicationName()));
 
+        log.info("======== DEPLOY INFO ========");
+        log.info("ApplicationName: {}", getApplicationName());
+        log.info("Staging: {}", staging);
+        log.info("Location is null: {}", getLocation() == null);
+        log.info("Location id: {}", getLocation().getId());
+        log.info("Location memory: {}", getLocation().getConfig(CloudFoundryPaasLocation.REQUIRED_MEMORY));
+        log.info("Uris : {}", uris);
+        log.info("=============================");
+
         getClient().createApplication(getApplicationName(), staging,
                 getLocation().getConfig(CloudFoundryPaasLocation.REQUIRED_MEMORY),
                 uris, null);
