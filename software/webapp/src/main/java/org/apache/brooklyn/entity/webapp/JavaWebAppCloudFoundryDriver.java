@@ -31,16 +31,16 @@ import java.util.Set;
 
 import org.apache.brooklyn.api.entity.EntityLocal;
 import org.apache.brooklyn.core.entity.Attributes;
-import org.apache.brooklyn.core.sensor.Sensors;
 import org.apache.brooklyn.entity.java.JavaSoftwareProcessDriver;
 import org.apache.brooklyn.entity.software.base.AbstractApplicationCloudFoundryDriver;
 import org.apache.brooklyn.entity.software.base.SoftwareProcess;
 import org.apache.brooklyn.location.cloudfoundry.CloudFoundryPaasLocation;
-import org.apache.brooklyn.util.collections.MutableList;
 import org.apache.brooklyn.util.collections.MutableSet;
 import org.apache.brooklyn.util.http.HttpTool;
+import org.cloudfoundry.client.lib.CloudFoundryException;
 import org.cloudfoundry.client.lib.domain.CloudApplication;
 import org.cloudfoundry.client.lib.domain.Staging;
+import org.springframework.http.HttpStatus;
 
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableSet;
@@ -145,7 +145,30 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
 
     @Override
     public boolean isRunning() {
-        return super.isRunning() && isInferRootAvailable();
+        boolean result = false;
+        boolean calculated = false;
+        int i = 0;
+        while ((i < 20) && (!calculated)) {
+            try {
+                result = super.isRunning() && isInferRootAvailable();
+                calculated = true;
+            } catch (CloudFoundryException e) {
+                if (e.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                    throw e;
+                } else {
+                    //Error de acceso
+                    i++;
+                }
+            } catch (Exception ee) {
+                //Error de acceso, reintentando
+                i++;
+            }
+        }
+        if (i == 20) {
+            throw new RuntimeException("Error checking the status of entity after 20 iterations");
+        } else {
+            return result;
+        }
     }
 
     private boolean isInferRootAvailable() {
@@ -160,20 +183,42 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
 
     @Override
     public void preLaunch() {
+        log.info("==============================  Calling PreLaunch");
         pushArtifact();
         configureEnv();
+        log.info("==============================  COMPLETED: PreLaunch");
     }
 
-    protected void pushArtifact(){
+    protected void pushArtifact() {
+        log.info("==============================  Calling PushArtifact");
         File war;
         try {
-            war = LocalResourcesDownloader
-                    .downloadResourceInLocalDir(getApplicationUrl());
-            getClient().uploadApplication(getApplicationName(), war.getCanonicalPath());
+            war = LocalResourcesDownloader.downloadResourceInLocalDir(getApplicationUrl());
+            tryPush(getApplicationName(), war.getCanonicalPath());
         } catch (IOException e) {
             log.error("Error deploying application {} managed by driver {}",
                     new Object[]{getEntity(), this});
         }
+    }
+
+    private void tryPush(String name, String path) {
+
+        log.info("==============================  Calling TRY PushArtifact");
+        int i = 0;
+        int limit = 20;
+        while (i < limit)
+            try {
+                log.info("==============================  Uploading artifact");
+                getClient().uploadApplication(name, path);
+                return;
+            } catch (Exception e) {
+                log.error("Wrong {} updating artifact {}, {}. Because {}", new Object[]{ i,name, path, e.getCause().toString()});
+                i++;
+                if (i == limit) {
+                    throw new RuntimeException("Error push artifact " + e);
+                }
+                refresh();
+            }
     }
 
     /**
@@ -182,6 +227,7 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
      */
     @SuppressWarnings("unchecked")
     protected void configureEnv() {
+        log.info("==============================  Calling Configure Environemtn");
         Map<String, String> shellEnvProp = (Map<String, String>) (Map) getEntity().getConfig(SoftwareProcess.SHELL_ENVIRONMENT);
         setEnv(shellEnvProp);
         setEnv(getEntity().getConfig(JavaWebAppSoftwareProcess.JAVA_SYSPROPS));
@@ -189,7 +235,22 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
 
     @SuppressWarnings("unchecked")
     private void setEnv(Map<String, String> envs) {
-        CloudApplication app = getClient().getApplication(applicationName);
+        log.info("==============================  Calling Set environemtn of application");
+        CloudApplication app = null;
+        int i = 0;
+        int limit = 20;
+        while (i < limit)
+            try {
+                app = getClient().getApplication(applicationName);
+                log.info("Application retrieved as expected");
+                return;
+            } catch (Exception e) {
+                i++;
+                if (i == limit) {
+                    throw new RuntimeException("Error setting environment to application because application is not retrieved" + e);
+                }
+                refresh();
+            }
 
         // app.setEnv() replaces the entire set of variables, so we need to add it externally.
         Map oldEnv = app.getEnvAsMap();
