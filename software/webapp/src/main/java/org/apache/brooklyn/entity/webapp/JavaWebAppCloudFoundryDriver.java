@@ -150,17 +150,21 @@ public abstract class JavaWebAppCloudFoundryDriver extends AbstractApplicationCl
         int i = 0;
         while ((i < 20) && (!calculated)) {
             try {
+                log.info("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&& Calling is running in pivotal ");
                 result = super.isRunning() && isInferRootAvailable();
                 calculated = true;
             } catch (CloudFoundryException e) {
                 if (e.getStatusCode().equals(HttpStatus.NOT_FOUND)) {
+                    log.error("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  Application not found because exception");
                     throw e;
                 } else {
                     //Error de acceso
+                    log.error("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  Cloud exception and retry {}" +e.getCause());
                     i++;
                 }
             } catch (Exception ee) {
                 //Error de acceso, reintentando
+                log.error("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&  Another error and retry {}" + ee.getCause());
                 i++;
             }
         }

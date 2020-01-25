@@ -20,20 +20,23 @@ package org.apache.brooklyn.entity.webapp.tomcat;
 
 import static java.lang.String.format;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-
-import javax.annotation.Nullable;
 
 import org.apache.brooklyn.api.sensor.AttributeSensor;
 import org.apache.brooklyn.core.entity.EntityFunctions;
+import org.apache.brooklyn.core.sensor.Sensors;
 import org.apache.brooklyn.entity.java.JavaAppUtils;
 import org.apache.brooklyn.entity.webapp.JavaWebAppSoftwareProcessImpl;
+import org.apache.brooklyn.feed.function.FunctionFeed;
+import org.apache.brooklyn.feed.function.FunctionPollConfig;
 import org.apache.brooklyn.feed.jmx.JmxAttributePollConfig;
 import org.apache.brooklyn.feed.jmx.JmxFeed;
+import org.apache.brooklyn.location.cloudfoundry.CloudFoundryPaasLocation;
+import org.apache.brooklyn.util.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicates;
 
@@ -51,11 +54,18 @@ public class TomcatServerImpl extends JavaWebAppSoftwareProcessImpl implements T
     private volatile JmxFeed jmxWebFeed;
     private volatile JmxFeed jmxAppFeed;
 
+    private volatile FunctionFeed healtServiceProcessIsRunning;
+
+    AttributeSensor<String> UPDATING_CLIENT = Sensors.newStringSensor("service.process.connected",
+            "Whether the process for the service is confirmed as running");
+
     @Override
     public void connectSensors() {
         super.connectSensors();
 
+        LOG.info("******Connect Sensors. Tomcat running without JMX monitoring; limited visibility of service available");
         if (getDriver().isJmxEnabled()) {
+        LOG.info("******Connect Sensors. With JMX");
             String requestProcessorMbeanName = "Catalina:type=GlobalRequestProcessor,name=\"http-*\"";
 
             Integer port = isHttpsEnabled() ? getAttribute(HTTPS_PORT) : getAttribute(HTTP_PORT);
@@ -95,8 +105,41 @@ public class TomcatServerImpl extends JavaWebAppSoftwareProcessImpl implements T
             jmxAppFeed = JavaAppUtils.connectMXBeanSensors(this);
         } else {
             // if not using JMX
-            LOG.warn("Tomcat running without JMX monitoring; limited visibility of service available");
+            LOG.info("Tomcat running without JMX monitoring");
             connectServiceUpIsRunning();
+            //Esto permite que la sesión del paas no se pierda.
+            //SI ES COMPATIBLE CON LA MIGRACION
+            connectPaasHealth();
+        }
+    }
+
+    private void connectPaasHealth() {
+
+        LOG.info("Iniciando connectPaasHealth");
+
+        if (getDriver() != null && getDriver().getLocation() != null && getDriver().getLocation() instanceof CloudFoundryPaasLocation) {
+
+            if (healtServiceProcessIsRunning != null) {
+                healtServiceProcessIsRunning.stop();
+            }
+
+            final CloudFoundryPaasLocation location = (CloudFoundryPaasLocation) getDriver().getLocation();
+            healtServiceProcessIsRunning = FunctionFeed.builder()
+                    .entity(this)
+                    .period(Duration.seconds(400))
+                            //.period(Duration.seconds(400))
+                    .onlyIfServiceUp(false)
+                    .poll(new FunctionPollConfig<String, String>(UPDATING_CLIENT)
+                            .suppressDuplicates(true)
+                            .onException(Functions.<String>constant(null))
+                            .callable(new Callable<String>() {
+                                public String call() {
+                                    LOG.info("============================>>>>>>>>>>>>> calling to refresh");
+                                    location.getCloudFoundryClient().login();
+                                    return null;
+                                }
+                            }))
+                    .build();
         }
     }
 
@@ -104,8 +147,8 @@ public class TomcatServerImpl extends JavaWebAppSoftwareProcessImpl implements T
     public void disconnectSensors() {
         super.disconnectSensors();
         if (getDriver() != null && getDriver().isJmxEnabled()) {
-           if (jmxWebFeed != null) jmxWebFeed.stop();
-           if (jmxAppFeed != null) jmxAppFeed.stop();
+            if (jmxWebFeed != null) jmxWebFeed.stop();
+            if (jmxAppFeed != null) jmxAppFeed.stop();
         } else {
             disconnectServiceUpIsRunning();
         }
@@ -116,7 +159,7 @@ public class TomcatServerImpl extends JavaWebAppSoftwareProcessImpl implements T
     public Class getDriverInterface() {
         return TomcatDriver.class;
     }
-    
+
     @Override
     public String getShortName() {
         return "Tomcat";
